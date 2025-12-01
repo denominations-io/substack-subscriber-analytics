@@ -531,7 +531,7 @@ def render_post_analysis(analysis, data):
     """Render the post analysis page."""
     st.markdown('<h2 class="section-header">Post Analysis</h2>', unsafe_allow_html=True)
 
-    tab1, tab2 = st.tabs(["Engagement by Post", "Conversion Attribution"])
+    tab1, tab2, tab3 = st.tabs(["Engagement by Post", "Conversion Attribution", "Engagement Drop-off"])
 
     with tab1:
         st.subheader("Open Rates by Post")
@@ -602,6 +602,152 @@ def render_post_analysis(analysis, data):
                         width='stretch', hide_index=True)
         else:
             st.info("No conversion attribution data available")
+
+    with tab3:
+        st.subheader("Post Engagement Drop-off Analysis")
+        st.caption("Identify posts after which subscribers stopped engaging")
+
+        posts = data.get('posts', pd.DataFrame())
+        opens = data.get('opens', pd.DataFrame())
+        delivers = data.get('delivers', pd.DataFrame())
+
+        if posts.empty or opens.empty:
+            st.info("Insufficient data for drop-off analysis. Need posts and opens data.")
+        else:
+            # Get posts sorted by date
+            posts_sorted = posts.sort_values('post_date').copy()
+            posts_sorted = posts_sorted[posts_sorted['post_date'].notna()]
+
+            if len(posts_sorted) < 3:
+                st.info("Need at least 3 posts for drop-off analysis.")
+            else:
+                # For each post, calculate:
+                # 1. Who opened this post
+                # 2. Of those openers, how many opened the next 3 posts
+                # 3. Calculate "drop-off rate"
+
+                post_ids = posts_sorted['post_id'].tolist()
+                post_titles = posts_sorted.set_index('post_id')['title'].to_dict()
+                post_dates = posts_sorted.set_index('post_id')['post_date'].to_dict()
+
+                drop_off_data = []
+
+                for i, post_id in enumerate(post_ids[:-3]):  # Skip last 3 posts
+                    # Get subscribers who opened this post
+                    post_openers = set(opens[opens['post_id'] == post_id]['email'].unique())
+
+                    if len(post_openers) < 10:  # Skip posts with too few openers
+                        continue
+
+                    # Get the next 3 posts
+                    next_posts = post_ids[i+1:i+4]
+
+                    # Check how many of the openers opened at least one of the next 3 posts
+                    next_opens = opens[opens['post_id'].isin(next_posts)]
+                    retained_subscribers = set(next_opens['email'].unique()) & post_openers
+                    dropped_subscribers = post_openers - retained_subscribers
+
+                    retention_rate = len(retained_subscribers) / len(post_openers) * 100
+                    drop_off_rate = len(dropped_subscribers) / len(post_openers) * 100
+
+                    drop_off_data.append({
+                        'post_id': post_id,
+                        'title': post_titles.get(post_id, 'Unknown')[:50],
+                        'post_date': post_dates.get(post_id),
+                        'openers': len(post_openers),
+                        'retained': len(retained_subscribers),
+                        'dropped': len(dropped_subscribers),
+                        'retention_rate': round(retention_rate, 1),
+                        'drop_off_rate': round(drop_off_rate, 1)
+                    })
+
+                if drop_off_data:
+                    drop_off_df = pd.DataFrame(drop_off_data)
+                    drop_off_df = drop_off_df.sort_values('drop_off_rate', ascending=False)
+
+                    # Summary metrics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        avg_drop_off = drop_off_df['drop_off_rate'].mean()
+                        st.metric("Avg Drop-off Rate", f"{avg_drop_off:.1f}%",
+                                 help="Average % of openers who don't open any of the next 3 posts")
+                    with col2:
+                        worst_post = drop_off_df.iloc[0]
+                        st.metric("Highest Drop-off", f"{worst_post['drop_off_rate']}%",
+                                 help=f"Post: {worst_post['title'][:30]}...")
+                    with col3:
+                        best_post = drop_off_df.iloc[-1]
+                        st.metric("Lowest Drop-off", f"{best_post['drop_off_rate']}%",
+                                 help=f"Post: {best_post['title'][:30]}...")
+
+                    st.markdown("---")
+
+                    # Chart: Drop-off rate over time (scatter plot like open rates)
+                    chart_df = drop_off_df.sort_values('post_date').copy()
+                    chart_df['short_title'] = chart_df['title'].apply(lambda x: x[:25] + '...' if len(x) > 25 else x)
+
+                    fig = px.scatter(
+                        chart_df,
+                        x='post_date',
+                        y='drop_off_rate',
+                        size='openers',
+                        color='drop_off_rate',
+                        color_continuous_scale='RdYlGn_r',  # Reversed: red=high drop-off (bad), green=low (good)
+                        hover_data=['title', 'openers', 'dropped', 'retained'],
+                        text='short_title',
+                        labels={'drop_off_rate': 'Drop-off Rate (%)', 'post_date': 'Post Date'}
+                    )
+
+                    # Position text labels above the points
+                    fig.update_traces(textposition='top center', textfont=dict(size=11))
+
+                    # Add average line
+                    fig.add_hline(y=avg_drop_off, line_dash="dash", line_color=CHART_COLORS['muted'],
+                                 annotation_text=f"Avg ({avg_drop_off:.1f}%)", annotation_font_size=13)
+
+                    apply_chart_style(fig, title="Drop-off Rate Over Time", height=550)
+                    fig.update_coloraxes(colorbar_title_font_size=13, colorbar_tickfont_size=12)
+                    fig.update_layout(margin=dict(t=100))  # More top margin for labels
+                    st.plotly_chart(fig, width='stretch')
+
+                    # Posts with highest drop-off (potential problem posts)
+                    st.subheader("Posts with Highest Drop-off")
+                    st.caption("These posts may have caused subscribers to disengage")
+
+                    worst_posts = drop_off_df.head(10).copy()
+                    worst_posts['post_date'] = pd.to_datetime(worst_posts['post_date']).dt.strftime('%Y-%m-%d')
+
+                    fig = go.Figure(data=[go.Bar(
+                        x=worst_posts['drop_off_rate'],
+                        y=worst_posts['title'],
+                        orientation='h',
+                        text=worst_posts.apply(lambda x: f"{x['drop_off_rate']}% ({x['dropped']}/{x['openers']})", axis=1),
+                        textposition='outside',
+                        textfont=dict(size=13),
+                        marker=dict(
+                            color=worst_posts['drop_off_rate'],
+                            colorscale='Reds',
+                            showscale=False
+                        ),
+                        hovertemplate='<b>%{y}</b><br>Drop-off: %{x}%<extra></extra>'
+                    )])
+                    apply_chart_style(fig, title="Highest Drop-off Posts", height=max(350, len(worst_posts) * 40 + 100))
+                    fig.update_layout(
+                        xaxis_title="Drop-off Rate (%)",
+                        yaxis={'categoryorder': 'total ascending'},
+                        margin=dict(l=20, r=150, t=80, b=60)
+                    )
+                    st.plotly_chart(fig, width='stretch')
+
+                    # Full data table
+                    with st.expander("View all post drop-off data"):
+                        display_cols = ['title', 'post_date', 'openers', 'retained', 'dropped', 'retention_rate', 'drop_off_rate']
+                        display_df = drop_off_df[display_cols].copy()
+                        display_df.columns = ['Title', 'Date', 'Openers', 'Retained', 'Dropped', 'Retention %', 'Drop-off %']
+                        display_df['Date'] = pd.to_datetime(display_df['Date']).dt.strftime('%Y-%m-%d')
+                        st.dataframe(display_df, width='stretch', hide_index=True)
+                else:
+                    st.info("Not enough data to calculate drop-off rates.")
 
 
 def render_subscriber_analysis(data, analysis):
