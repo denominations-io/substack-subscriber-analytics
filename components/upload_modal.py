@@ -14,6 +14,18 @@ def render_upload_css():
     """Render custom CSS for the upload modal."""
     st.markdown("""
     <style>
+    /* Force dark text globally for upload modal */
+    .stApp p, .stApp span, .stApp label, .stApp div {
+        color: #1a1a2e;
+    }
+    .stMarkdown, .stText {
+        color: #1a1a2e !important;
+    }
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span {
+        color: #1a1a2e !important;
+    }
+
     /* Header */
     .upload-header {
         text-align: center;
@@ -126,11 +138,17 @@ def render_upload_css():
         border-radius: 8px;
         padding: 8px 16px;
         border: 1px solid #e9ecef;
+        color: #1a1a2e !important;
     }
     .stTabs [aria-selected="true"] {
-        background: #1a1a2e;
-        color: white;
-        border-color: #1a1a2e;
+        background: #1a1a2e !important;
+        color: white !important;
+        border-color: #1a1a2e !important;
+    }
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span,
+    .stTabs [aria-selected="true"] div {
+        color: white !important;
     }
 
     /* Expander styling */

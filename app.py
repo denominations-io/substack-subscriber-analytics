@@ -33,22 +33,62 @@ st.markdown("""
     /* Global app styling */
     .stApp {
         background-color: #fafafa;
+        color: #1a1a2e;
     }
 
-    /* Header styling */
+    /* Force dark text globally */
+    .stApp p, .stApp span, .stApp label, .stApp div {
+        color: #1a1a2e;
+    }
+
+    /* Streamlit element text colors */
+    .stMarkdown, .stText, .stCaption {
+        color: #1a1a2e !important;
+    }
+
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span,
+    [data-testid="stMarkdownContainer"] li {
+        color: #1a1a2e !important;
+    }
+
+    /* Radio buttons and selectboxes */
+    .stRadio label, .stSelectbox label, .stMultiSelect label {
+        color: #1a1a2e !important;
+    }
+    .stRadio [data-testid="stWidgetLabel"],
+    .stSelectbox [data-testid="stWidgetLabel"] {
+        color: #1a1a2e !important;
+    }
+
+    /* Metrics */
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+        color: #1a1a2e !important;
+    }
+
+    /* Captions */
+    .stCaption, [data-testid="stCaption"] {
+        color: #6c757d !important;
+    }
+
+    /* Header styling - white text on dark background */
     .app-header {
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
         padding: 30px 40px;
         border-radius: 0 0 20px 20px;
         margin: -1rem -1rem 2rem -1rem;
-        color: white;
+        color: white !important;
     }
-    .app-header h1 {
-        color: white;
+    .app-header h1, .app-header p, .app-header span {
+        color: white !important;
         font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
         letter-spacing: -0.5px;
+    }
+    .app-header p {
+        font-size: 1rem;
+        font-weight: 400;
     }
 
     /* Metric cards */
@@ -100,8 +140,24 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background: #f8f9fa;
     }
+    [data-testid="stSidebar"] * {
+        color: #1a1a2e !important;
+    }
     [data-testid="stSidebar"] .stRadio label {
         font-size: 0.9rem;
+        color: #1a1a2e !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label {
+        color: #1a1a2e !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"],
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        color: #1a1a2e !important;
     }
 
     /* Tab styling */
@@ -115,11 +171,17 @@ st.markdown("""
         padding: 8px 16px;
         border: 1px solid #e9ecef;
         font-size: 0.9rem;
+        color: #1a1a2e !important;
     }
     .stTabs [aria-selected="true"] {
-        background: #1a1a2e;
-        color: white;
-        border-color: #1a1a2e;
+        background: #1a1a2e !important;
+        color: white !important;
+        border-color: #1a1a2e !important;
+    }
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span,
+    .stTabs [aria-selected="true"] div {
+        color: white !important;
     }
 
     /* Data table styling */
@@ -128,13 +190,125 @@ st.markdown("""
         overflow: hidden;
     }
 
-    /* Button styling */
-    .stButton > button {
+    /* Button styling - light background with dark text */
+    .stButton > button,
+    .stButton button {
         border-radius: 8px;
         font-weight: 500;
+        background: #f8f9fa !important;
+        color: #1a1a2e !important;
+        border: 1px solid #dee2e6 !important;
     }
-    .stButton > button:hover {
-        border-color: #1a1a2e;
+    .stButton > button:hover,
+    .stButton button:hover {
+        background: #e9ecef !important;
+        border-color: #adb5bd !important;
+    }
+    .stButton > button p,
+    .stButton > button span,
+    .stButton button p,
+    .stButton button span {
+        color: #1a1a2e !important;
+    }
+    /* Primary buttons keep dark background with white text */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"],
+    button[data-testid="baseButton-primary"] {
+        background: #1a1a2e !important;
+        color: white !important;
+        border-color: #1a1a2e !important;
+    }
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    button[data-testid="baseButton-primary"] p,
+    button[data-testid="baseButton-primary"] span {
+        color: white !important;
+    }
+    /* Sidebar buttons - use light background with dark text for consistency */
+    [data-testid="stSidebar"] .stButton button {
+        background: #f8f9fa !important;
+        color: #1a1a2e !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        background: #e9ecef !important;
+        border-color: #adb5bd !important;
+    }
+    [data-testid="stSidebar"] .stButton button p,
+    [data-testid="stSidebar"] .stButton button span,
+    [data-testid="stSidebar"] .stButton button div,
+    [data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] button span {
+        color: #1a1a2e !important;
+    }
+
+    /* Tooltips - light background with dark text */
+    [data-baseweb="tooltip"],
+    [role="tooltip"],
+    .stTooltipContent,
+    div[data-testid="stTooltipContent"] {
+        background: #f8f9fa !important;
+        color: #1a1a2e !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    [data-baseweb="tooltip"] *,
+    [role="tooltip"] * {
+        color: #1a1a2e !important;
+    }
+
+    /* Download buttons - light background with dark text */
+    .stDownloadButton button,
+    [data-testid="stDownloadButton"] button {
+        background: #f8f9fa !important;
+        color: #1a1a2e !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    .stDownloadButton button:hover,
+    [data-testid="stDownloadButton"] button:hover {
+        background: #e9ecef !important;
+        border-color: #adb5bd !important;
+    }
+    .stDownloadButton button p,
+    .stDownloadButton button span,
+    [data-testid="stDownloadButton"] button p,
+    [data-testid="stDownloadButton"] button span {
+        color: #1a1a2e !important;
+    }
+
+    /* Selectbox/dropdown - light background with dark text */
+    [data-baseweb="select"] {
+        background: #f8f9fa !important;
+    }
+    [data-baseweb="select"] > div {
+        background: #f8f9fa !important;
+        border-color: #dee2e6 !important;
+    }
+    [data-baseweb="popover"],
+    [data-baseweb="menu"],
+    [data-baseweb="select"] [role="listbox"],
+    ul[role="listbox"] {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    [data-baseweb="menu"] li,
+    [data-baseweb="select"] li,
+    ul[role="listbox"] li,
+    [role="option"] {
+        background: #f8f9fa !important;
+        color: #1a1a2e !important;
+    }
+    [data-baseweb="menu"] li:hover,
+    [data-baseweb="select"] li:hover,
+    ul[role="listbox"] li:hover,
+    [role="option"]:hover,
+    [data-highlighted="true"] {
+        background: #e9ecef !important;
+    }
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] div,
+    [data-baseweb="menu"] span,
+    [role="option"] span {
+        color: #1a1a2e !important;
     }
 
     /* Expander styling */
