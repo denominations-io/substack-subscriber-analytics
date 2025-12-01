@@ -87,40 +87,81 @@ def extract_substack_export(zip_file, target_dir: Path) -> tuple[bool, str]:
     Returns:
         Tuple of (success, message)
     """
+    # Directories to ignore (macOS artifacts, etc.)
+    IGNORED_PREFIXES = ('__MACOSX', '.DS_Store', '._')
+
+    def should_ignore(name: str) -> bool:
+        """Check if a file/directory should be ignored."""
+        parts = name.split('/')
+        return any(part.startswith(prefix) for part in parts for prefix in IGNORED_PREFIXES)
+
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
 
+        # Reset file pointer to beginning (important for Streamlit UploadedFile)
+        if hasattr(zip_file, 'seek'):
+            zip_file.seek(0)
+
         with zipfile.ZipFile(zip_file, 'r') as zf:
-            # Check for nested directory structure
-            # Substack exports sometimes have a root folder
-            namelist = zf.namelist()
+            # Filter out ignored files
+            namelist = [n for n in zf.namelist() if not should_ignore(n)]
 
-            # Find the root - check if all files share a common prefix directory
-            root_dirs = set()
+            if not namelist:
+                return False, "Zip file is empty or contains only ignored files"
+
+            # Detect structure: find common root directory if one exists
+            # Check if all entries start with the same directory prefix
+            first_parts = set()
             for name in namelist:
-                parts = name.split('/')
-                if len(parts) > 1 and parts[0]:
-                    root_dirs.add(parts[0])
+                # Get the first path component
+                first_part = name.split('/')[0]
+                if first_part:
+                    first_parts.add(first_part)
 
-            # If there's exactly one root directory, extract with flattening
-            if len(root_dirs) == 1:
-                root_dir = list(root_dirs)[0]
-                for member in zf.namelist():
-                    if member.startswith(root_dir + '/'):
-                        # Remove the root directory prefix
-                        new_path = member[len(root_dir) + 1:]
-                        if new_path:  # Skip the root directory itself
+            # Check if there's a single wrapper directory containing all files
+            # A wrapper directory means: one common prefix AND that prefix is a directory (has children)
+            single_wrapper = None
+            if len(first_parts) == 1:
+                potential_wrapper = list(first_parts)[0]
+                # Check if this is actually a directory (other entries start with it + '/')
+                children = [n for n in namelist if n.startswith(potential_wrapper + '/')]
+                if children:
+                    single_wrapper = potential_wrapper
+
+            if single_wrapper:
+                # Extract with flattening - remove the wrapper directory prefix
+                for member in namelist:
+                    if member == single_wrapper or member == single_wrapper + '/':
+                        # Skip the wrapper directory entry itself
+                        continue
+
+                    if member.startswith(single_wrapper + '/'):
+                        # Remove the wrapper directory prefix
+                        new_path = member[len(single_wrapper) + 1:]
+                        if new_path:
                             if member.endswith('/'):
-                                # It's a directory
                                 (target_dir / new_path).mkdir(parents=True, exist_ok=True)
                             else:
-                                # It's a file
                                 (target_dir / new_path).parent.mkdir(parents=True, exist_ok=True)
                                 with zf.open(member) as src, open(target_dir / new_path, 'wb') as dst:
                                     dst.write(src.read())
+                    else:
+                        # File at root level (shouldn't happen with single wrapper, but handle it)
+                        if member.endswith('/'):
+                            (target_dir / member).mkdir(parents=True, exist_ok=True)
+                        else:
+                            (target_dir / member).parent.mkdir(parents=True, exist_ok=True)
+                            with zf.open(member) as src, open(target_dir / member, 'wb') as dst:
+                                dst.write(src.read())
             else:
-                # Extract directly
-                zf.extractall(target_dir)
+                # No wrapper directory - extract directly
+                for member in namelist:
+                    if member.endswith('/'):
+                        (target_dir / member).mkdir(parents=True, exist_ok=True)
+                    else:
+                        (target_dir / member).parent.mkdir(parents=True, exist_ok=True)
+                        with zf.open(member) as src, open(target_dir / member, 'wb') as dst:
+                            dst.write(src.read())
 
         return True, "Export extracted successfully"
 
@@ -251,11 +292,16 @@ def delete_dataset(dataset_path: str) -> tuple[bool, str]:
         Tuple of (success, message)
     """
     try:
-        path = Path(dataset_path)
+        path = Path(dataset_path).resolve()
+        data_dir_resolved = DATA_DIR.resolve()
+
         if not path.exists():
             return False, "Dataset not found"
 
-        if not path.is_relative_to(DATA_DIR.resolve()):
+        # Security check: ensure path is within DATA_DIR
+        try:
+            path.relative_to(data_dir_resolved)
+        except ValueError:
             return False, "Invalid dataset path"
 
         shutil.rmtree(path)
@@ -348,9 +394,21 @@ def process_upload(zip_file, filename: str) -> tuple[bool, str, Optional[str]]:
     # Validate structure
     is_valid, errors = validate_export_structure(target_dir)
     if not is_valid:
+        # List what was actually extracted for debugging
+        extracted_files = []
+        for item in target_dir.iterdir():
+            if item.is_dir():
+                extracted_files.append(f"{item.name}/ (dir)")
+            else:
+                extracted_files.append(item.name)
+
         # Clean up on failure
         shutil.rmtree(target_dir)
-        return False, "Invalid export structure:\n- " + "\n- ".join(errors), None
+
+        error_msg = "Invalid export structure:\n- " + "\n- ".join(errors)
+        if extracted_files:
+            error_msg += f"\n\nFiles found: {', '.join(extracted_files[:10])}"
+        return False, error_msg, None
 
     # Create manifest
     manifest = create_manifest(target_dir, filename)

@@ -173,8 +173,11 @@ def analyze_subscriber_acquisition(subscribers: pd.DataFrame) -> Dict[str, Any]:
     # Plan distribution
     plan_dist = subscribers['plan'].value_counts()
 
-    # Acquisition by month
-    subscribers['signup_month'] = subscribers['created_at'].dt.to_period('M')
+    # Acquisition by month (convert to tz-naive to avoid warning)
+    created_at = subscribers['created_at']
+    if created_at.dt.tz is not None:
+        created_at = created_at.dt.tz_convert(None)
+    subscribers['signup_month'] = created_at.dt.to_period('M')
     monthly_signups = subscribers.groupby('signup_month').size()
 
     # Paid vs free over time
@@ -218,9 +221,16 @@ def analyze_engagement_trends(subscribers: pd.DataFrame, opens: pd.DataFrame,
             'summary': "No engagement data available"
         }
 
-    # Calculate monthly open rates
-    opens['month'] = opens['timestamp'].dt.to_period('M')
-    delivers['month'] = delivers['timestamp'].dt.to_period('M')
+    # Calculate monthly open rates (convert to tz-naive to avoid warning)
+    opens_ts = opens['timestamp']
+    if opens_ts.dt.tz is not None:
+        opens_ts = opens_ts.dt.tz_convert(None)
+    opens['month'] = opens_ts.dt.to_period('M')
+
+    delivers_ts = delivers['timestamp']
+    if delivers_ts.dt.tz is not None:
+        delivers_ts = delivers_ts.dt.tz_convert(None)
+    delivers['month'] = delivers_ts.dt.to_period('M')
 
     monthly_opens = opens.groupby('month')['email'].nunique()
     monthly_delivers = delivers.groupby('month')['email'].nunique()
@@ -234,8 +244,11 @@ def analyze_engagement_trends(subscribers: pd.DataFrame, opens: pd.DataFrame,
         monthly_engagement['opens'] / monthly_engagement['delivers']
     ).fillna(0)
 
-    # Subscriber growth trend
-    subscribers['signup_month'] = subscribers['created_at'].dt.to_period('M')
+    # Subscriber growth trend (convert to tz-naive to avoid warning)
+    created_at_trend = subscribers['created_at']
+    if created_at_trend.dt.tz is not None:
+        created_at_trend = created_at_trend.dt.tz_convert(None)
+    subscribers['signup_month'] = created_at_trend.dt.to_period('M')
     cumulative_subs = subscribers.groupby('signup_month').size().cumsum()
 
     # Active subscriber ratio over time (those who opened recent emails)

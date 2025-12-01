@@ -14,44 +14,129 @@ def render_upload_css():
     """Render custom CSS for the upload modal."""
     st.markdown("""
     <style>
-    .upload-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 40px;
+    /* Header */
+    .upload-header {
         text-align: center;
+        padding: 60px 20px;
+        margin: -1rem -1rem 2rem -1rem;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        border-radius: 0 0 30px 30px;
+    }
+    .upload-header h1 {
         color: white;
-        margin: 20px 0;
+        font-size: 2.2rem;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+        letter-spacing: -0.5px;
     }
-    .upload-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-    .upload-subtitle {
-        font-size: 1.2rem;
-        opacity: 0.9;
-        margin-bottom: 30px;
-    }
-    .upload-step {
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px;
-        padding: 20px;
-        margin: 10px 0;
-        text-align: left;
-    }
-    .upload-step h4 {
-        margin: 0 0 10px 0;
-        color: white;
-    }
-    .upload-step p {
+    .upload-header p {
+        color: rgba(255,255,255,0.7);
+        font-size: 1.05rem;
         margin: 0;
-        opacity: 0.9;
-        font-size: 0.95rem;
     }
-    .stFileUploader > div {
-        background: rgba(255,255,255,0.95);
-        border-radius: 15px;
+
+    /* Steps */
+    .steps-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin: 0 0 2rem 0;
+    }
+    .step-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 24px 20px;
+        text-align: center;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+    .step-card:hover {
+        border-color: #dee2e6;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .step-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+        color: white;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 14px;
+    }
+    .step-card h4 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #212529;
+        margin: 0 0 6px 0;
+    }
+    .step-card p {
+        font-size: 0.82rem;
+        color: #6c757d;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    /* Upload area */
+    .upload-section {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        border: 1px solid #e9ecef;
+    }
+    .upload-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #212529;
+        margin: 0 0 20px 0;
+    }
+
+    /* File uploader styling */
+    [data-testid="stFileUploader"] {
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px dashed #dee2e6;
         padding: 20px;
+    }
+    [data-testid="stFileUploader"]:hover {
+        border-color: #adb5bd;
+    }
+    [data-testid="stFileUploader"] section {
+        padding: 0;
+    }
+    [data-testid="stFileUploader"] section > div {
+        padding: 0 !important;
+    }
+
+    /* Hide default labels we're replacing */
+    .upload-section .stFileUploader label {
+        display: none;
+    }
+
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 8px 16px;
+        border: 1px solid #e9ecef;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #1a1a2e;
+        color: white;
+        border-color: #1a1a2e;
+    }
+
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        font-size: 0.9rem;
+        color: #6c757d;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -69,6 +154,10 @@ def render_upload_modal(force_show: bool = False):
     """
     render_upload_css()
 
+    # Check if we're in the "add subscriber details" step
+    if st.session_state.get('pending_subscriber_details'):
+        return _render_subscriber_details_prompt()
+
     # Check if we have any existing datasets
     datasets = get_available_datasets()
     has_data = len(datasets) > 0
@@ -85,65 +174,42 @@ def _render_full_upload_modal(has_existing_data: bool):
 
     # Header
     st.markdown("""
-    <div class="upload-container">
-        <div class="upload-title">Substack Subscriber Analytics</div>
-        <div class="upload-subtitle">Upload your Substack export to get started</div>
+    <div class="upload-header">
+        <h1>Substack Subscriber Analytics</h1>
+        <p>Upload your Substack export to get started</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Instructions
-    st.markdown("### How to Get Your Data")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("""
-        <div class="upload-step">
-            <h4>1. Export Your Data</h4>
-            <p>Go to your Substack dashboard → Settings → Exports → Download a zip of all your data</p>
+    # Steps - clean 3-column layout
+    st.markdown("""
+    <div class="steps-container">
+        <div class="step-card">
+            <div class="step-icon">1</div>
+            <h4>Export from Substack</h4>
+            <p>Settings → Exports → Download zip</p>
         </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="upload-step">
-            <h4>2. Upload the Zip File</h4>
-            <p>Drag and drop or click to upload the .zip file you downloaded from Substack</p>
+        <div class="step-card">
+            <div class="step-icon">2</div>
+            <h4>Upload below</h4>
+            <p>Drop your .zip file</p>
         </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div class="upload-step">
-            <h4>3. Optional: Subscriber Details</h4>
-            <p>For richer analytics, export subscriber details from Subscribers → Export</p>
+        <div class="step-card">
+            <div class="step-icon">3</div>
+            <h4>Explore insights</h4>
+            <p>Engagement, segments & more</p>
         </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="upload-step">
-            <h4>4. Explore Your Analytics</h4>
-            <p>Once uploaded, explore engagement metrics, subscriber segments, and more!</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
+    </div>
+    """, unsafe_allow_html=True)
 
     # Upload section
-    st.markdown("### Upload Your Data")
-
     tab1, tab2 = st.tabs(["Complete Export (.zip)", "Subscriber Details (.csv)"])
 
     with tab1:
-        st.markdown("""
-        Upload the complete Substack data export (zip file).
-        This includes your email list, posts, and engagement data.
-        """)
-
         uploaded_zip = st.file_uploader(
             "Drop your Substack export zip file here",
             type=['zip'],
             key="zip_uploader",
-            help="Export from: Substack Settings → Exports → Download zip"
+            help="Substack Settings → Exports → Download zip"
         )
 
         if uploaded_zip is not None:
@@ -154,30 +220,28 @@ def _render_full_upload_modal(has_existing_data: bool):
                 )
 
                 if success:
-                    st.success(f"✅ {message}")
+                    st.success(message)
                     st.balloons()
 
-                    # Store the new dataset path in session state
+                    # Store the new dataset path and prompt for subscriber details
                     st.session_state.active_dataset = dataset_path
+                    st.session_state.pending_subscriber_details = dataset_path
                     st.session_state.show_upload_modal = False
 
-                    # Rerun to refresh the app
+                    # Rerun to show subscriber details prompt
                     st.rerun()
                 else:
-                    st.error(f"❌ {message}")
-                    st.markdown("""
-                    **Troubleshooting:**
-                    - Make sure you uploaded the correct zip file from Substack
-                    - The zip should contain: posts.csv, email_list*.csv, and a posts/ folder
-                    - Try downloading a fresh export from Substack
-                    """)
+                    st.error(message)
+                    with st.expander("Troubleshooting"):
+                        st.markdown("""
+                        - Make sure you uploaded the correct zip file from Substack
+                        - The zip should contain `posts.csv`, `email_list*.csv`, and a `posts/` folder
+                        - Try downloading a fresh export from Substack
+                        """)
 
     with tab2:
         if has_existing_data:
-            st.markdown("""
-            Add subscriber details to enrich your existing dataset.
-            This enables geographic analysis, multi-channel engagement tracking, and more.
-            """)
+            st.caption("Add geographic & engagement data to your existing dataset")
 
             # Let user select which dataset to add details to
             datasets = get_available_datasets()
@@ -188,14 +252,15 @@ def _render_full_upload_modal(has_existing_data: bool):
 
             selected = st.selectbox(
                 "Add to dataset:",
-                options=list(dataset_options.keys())
+                options=list(dataset_options.keys()),
+                label_visibility="collapsed"
             )
 
             uploaded_csv = st.file_uploader(
                 "Drop your subscriber_details.csv here",
                 type=['csv'],
                 key="csv_uploader",
-                help="Export from: Substack Subscribers → Export"
+                help="Substack Subscribers → Export"
             )
 
             if uploaded_csv is not None and selected:
@@ -207,33 +272,87 @@ def _render_full_upload_modal(has_existing_data: bool):
                     )
 
                     if success:
-                        st.success(f"✅ {message}")
-                        # Clear cache to reload data
+                        st.success(message)
                         st.cache_data.clear()
                         st.rerun()
                     else:
-                        st.error(f"❌ {message}")
+                        st.error(message)
         else:
-            st.info("Upload a complete export first, then you can add subscriber details.")
+            st.info("Upload a complete export first to add subscriber details.")
 
-    # Show example of expected file structure
-    with st.expander("What should the export contain?"):
+    return None
+
+
+def _render_subscriber_details_prompt():
+    """Render the optional subscriber details upload prompt after successful zip upload."""
+
+    dataset_path = st.session_state.pending_subscriber_details
+
+    # Header
+    st.markdown("""
+    <div class="upload-header">
+        <h1>Data Imported Successfully!</h1>
+        <p>Want to unlock more insights?</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Explanation
+    st.markdown("""
+    <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e9ecef;">
+        <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; color: #212529;">Add Subscriber Details (Optional)</h3>
+        <p style="margin: 0 0 16px 0; color: #6c757d; font-size: 0.95rem;">
+            Upload <code>subscriber_details.csv</code> to unlock additional analytics:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; color: #495057; font-size: 0.9rem;">
+            <li>Geographic segmentation (by country/region)</li>
+            <li>Multi-channel engagement (email, web, comments, shares)</li>
+            <li>Advanced inactive subscriber analysis</li>
+            <li>Engagement flow Sankey diagrams</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # How to get the file
+    with st.expander("How to export subscriber details"):
         st.markdown("""
-        A valid Substack export contains:
-
-        ```
-        your-export.zip
-        ├── email_list.your-newsletter.csv  (subscriber list)
-        ├── posts.csv                        (all your posts)
-        └── posts/                           (engagement data)
-            ├── 12345.opens.csv              (who opened each post)
-            └── 12345.delivers.csv           (who received each post)
-        ```
-
-        **Optional enhancement:**
-        - `subscriber_details.csv` - Export separately from the Subscribers page
-          for geographic data, multi-channel engagement metrics, and more
+        1. Go to your Substack dashboard
+        2. Navigate to **Subscribers**
+        3. Click **Export** to download `subscriber_details.csv`
         """)
+
+    # File uploader
+    uploaded_csv = st.file_uploader(
+        "Drop your subscriber_details.csv here",
+        type=['csv'],
+        key="details_csv_uploader",
+        help="Substack Subscribers → Export"
+    )
+
+    if uploaded_csv is not None:
+        with st.spinner("Adding subscriber details..."):
+            success, message = add_subscriber_details(
+                dataset_path,
+                uploaded_csv
+            )
+
+            if success:
+                st.success(message)
+                # Clear the pending state and proceed to dashboard
+                st.session_state.pending_subscriber_details = None
+                st.cache_data.clear()
+                st.rerun()
+            else:
+                st.error(message)
+
+    # Skip button
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Skip for now →", use_container_width=True):
+            st.session_state.pending_subscriber_details = None
+            st.rerun()
+
+    st.caption("You can always add subscriber details later from the sidebar.")
 
     return None
 
