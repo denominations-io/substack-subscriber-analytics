@@ -8,9 +8,13 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
 from pathlib import Path
 from datetime import datetime, timedelta
+
+# Force light theme for all Plotly charts (prevents system dark mode from affecting charts)
+pio.templates.default = "plotly_white"
 
 from data_loader import load_all_data
 from metrics import calculate_all_metrics, rate_open_rate
@@ -395,6 +399,8 @@ CHART_PALETTE = ['#1a1a2e', '#0f3460', '#e94560', '#3498db', '#2ecc71', '#f39c12
 def apply_chart_style(fig, title=None, height=450):
     """Apply consistent styling to Plotly charts for social media sharing."""
     fig.update_layout(
+        # Force light template to override system dark mode
+        template='plotly_white',
         # Font settings - larger for readability in screenshots
         font=dict(
             family="Inter, -apple-system, BlinkMacSystemFont, sans-serif",
@@ -411,12 +417,12 @@ def apply_chart_style(fig, title=None, height=450):
         # Layout
         height=height,
         margin=dict(l=60, r=40, t=80 if title else 40, b=60),
-        # Background
-        paper_bgcolor='white',
-        plot_bgcolor='white',
+        # Background - explicit white
+        paper_bgcolor='#ffffff',
+        plot_bgcolor='#ffffff',
         # Legend
         legend=dict(
-            font=dict(size=13),
+            font=dict(size=13, color='#212529'),
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='#e9ecef',
             borderwidth=1,
@@ -425,7 +431,8 @@ def apply_chart_style(fig, title=None, height=450):
         hoverlabel=dict(
             bgcolor='white',
             font_size=13,
-            font_family="Inter, sans-serif"
+            font_family="Inter, sans-serif",
+            font_color='#212529'
         ),
     )
     # Axis styling
@@ -442,6 +449,13 @@ def apply_chart_style(fig, title=None, height=450):
         gridcolor='#f1f3f4',
         linecolor='#dee2e6',
         showline=True,
+    )
+    # Colorbar styling (for heatmaps, scatter with color scale, etc.)
+    fig.update_coloraxes(
+        colorbar=dict(
+            tickfont=dict(color='#495057'),
+            title_font=dict(color='#495057')
+        )
     )
     return fig
 
