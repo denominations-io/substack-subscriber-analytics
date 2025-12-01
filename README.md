@@ -2,6 +2,8 @@
 
 A powerful Streamlit dashboard for analyzing your Substack newsletter's subscriber engagement, growth metrics, and list health.
 
+Based on Sharyph's excellent [newsletter audit playbook](https://newsletter.thedigitalcreator.co/p/substack-newsletter-audit-playbook).
+
 ## Features
 
 - **7 Key Metrics Dashboard**: Track open rates, conversion rates, growth, and churn with industry benchmarks
