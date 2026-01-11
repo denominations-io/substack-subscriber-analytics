@@ -83,15 +83,49 @@ pip install -r requirements.txt
 
 ### Step 5: Run the app
 
+**Using Make (recommended):**
+```bash
+make run
+```
+
+**Or manually:**
 ```bash
 streamlit run app.py
 ```
 
 Your browser should automatically open to the dashboard. If it doesn't, go to: **http://localhost:8501**
 
-### Quick Reference
+### Makefile Commands
 
-Each time you want to run the app, open your terminal and run:
+| Command | Description |
+|---------|-------------|
+| `make run` | Start the Streamlit application (creates venv if needed) |
+| `make install` | Create virtual environment and install dependencies |
+| `make clean` | Remove the virtual environment |
+| `make help` | Show available commands |
+| `make info` | Show detected OS and configuration paths |
+
+### Quick Reference (Using Make)
+
+The easiest way to run the app is with Make, which handles the virtual environment automatically.
+
+**Mac/Linux:**
+```bash
+cd /path/to/substack-subscriber-analytics
+make run
+```
+
+**Windows (with Make installed):**
+```bash
+cd \path\to\substack-subscriber-analytics
+make run
+```
+
+> **Note for Windows users:** Make is not installed by default. See [Installing Make on Windows](#installing-make-on-windows) below.
+
+### Quick Reference (Manual)
+
+If you prefer not to use Make, activate the virtual environment manually:
 
 **Mac/Linux:**
 ```bash
@@ -189,6 +223,7 @@ substack-subscriber-analytics/
 │   ├── upload_modal.py    # Upload interface
 │   └── data_manager.py    # Dataset management
 ├── .data/                 # User data (gitignored)
+├── Makefile               # Cross-platform build commands
 ├── requirements.txt       # Python dependencies
 ├── LICENSE                # MIT License
 └── README.md              # This file
@@ -196,12 +231,67 @@ substack-subscriber-analytics/
 
 ## Requirements
 
+### Python Dependencies
+
 ```
 pandas >= 2.0.0
 seaborn >= 0.13.0
 matplotlib >= 3.7.0
 streamlit >= 1.28.0
 plotly >= 5.18.0
+```
+
+### Prerequisites by Operating System
+
+#### macOS
+
+- **Python 3.9+**: Download from [python.org](https://www.python.org/downloads/) or install via Homebrew: `brew install python`
+- **Make**: Pre-installed on macOS
+
+#### Linux (Ubuntu/Debian)
+
+- **Python 3.9+**: `sudo apt install python3 python3-venv python3-pip`
+- **Make**: `sudo apt install make` (usually pre-installed)
+
+#### Windows
+
+- **Python 3.9+**: Download from [python.org](https://www.python.org/downloads/)
+  - **Important:** Check "Add Python to PATH" during installation
+- **Make** (optional): See installation instructions below
+
+### Installing Make on Windows
+
+Make is not included with Windows by default. Here are three options:
+
+**Option 1: Using Chocolatey (Recommended)**
+```powershell
+# Install Chocolatey first (run PowerShell as Administrator)
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# Then install Make
+choco install make
+```
+
+**Option 2: Using winget**
+```powershell
+winget install GnuWin32.Make
+```
+
+**Option 3: Manual Installation**
+1. Download from [GnuWin32](http://gnuwin32.sourceforge.net/packages/make.htm)
+2. Add the installation path to your system PATH
+
+**Alternative: Use PowerShell without Make**
+
+If you don't want to install Make, you can run the commands manually:
+```powershell
+# Create virtual environment (first time only)
+python -m venv venv
+
+# Activate and run
+.\venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
 ## Contributing
