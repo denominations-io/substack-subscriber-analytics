@@ -318,6 +318,93 @@ def identify_super_engagers(opens: pd.DataFrame, delivers: pd.DataFrame,
     }
 
 
+def build_super_engager_profiles(opens: pd.DataFrame, delivers: pd.DataFrame,
+                                  subscribers: pd.DataFrame, posts: pd.DataFrame,
+                                  subscriber_details: pd.DataFrame = None,
+                                  min_open_rate: float = 0.8,
+                                  min_posts_delivered: int = 5) -> pd.DataFrame:
+    """
+    Build rich per-engager profiles for outreach by joining opens, delivers,
+    posts, subscribers, and subscriber_details data.
+
+    Returns a DataFrame with one row per super engager and all available
+    outreach-relevant columns.
+    """
+    if opens.empty or delivers.empty:
+        return pd.DataFrame()
+
+    # Per-subscriber open/deliver counts
+    sub_opens = opens.groupby('email')['post_id'].nunique().reset_index()
+    sub_opens.columns = ['email', 'posts_opened']
+
+    sub_delivers = delivers.groupby('email')['post_id'].nunique().reset_index()
+    sub_delivers.columns = ['email', 'posts_delivered']
+
+    sub_engagement = sub_opens.merge(sub_delivers, on='email', how='outer').fillna(0)
+    sub_engagement['open_rate'] = (
+        sub_engagement['posts_opened'] / sub_engagement['posts_delivered']
+    ).fillna(0)
+
+    # Filter by thresholds
+    profiles = sub_engagement[
+        (sub_engagement['posts_delivered'] >= min_posts_delivered) &
+        (sub_engagement['open_rate'] >= min_open_rate)
+    ].copy()
+
+    if profiles.empty:
+        return pd.DataFrame()
+
+    # Last post opened: find most recent open per subscriber
+    opens_with_ts = opens.copy()
+    last_opens = opens_with_ts.sort_values('timestamp').groupby('email').last().reset_index()
+    last_opens = last_opens[['email', 'post_id', 'timestamp']].rename(
+        columns={'timestamp': 'last_open_date', 'post_id': 'last_open_post_id'}
+    )
+
+    profiles = profiles.merge(last_opens, on='email', how='left')
+
+    # Join post title for last opened post
+    if not posts.empty and 'last_open_post_id' in profiles.columns:
+        post_titles = posts[['post_id', 'title']].rename(
+            columns={'title': 'last_post_opened_title'}
+        )
+        profiles = profiles.merge(
+            post_titles, left_on='last_open_post_id', right_on='post_id', how='left'
+        ).drop(columns=['post_id', 'last_open_post_id'], errors='ignore')
+
+    # Join subscriber info
+    sub_cols = ['email', 'is_paid', 'created_at']
+    available_sub_cols = [c for c in sub_cols if c in subscribers.columns]
+    profiles = profiles.merge(
+        subscribers[available_sub_cols], on='email', how='left'
+    )
+    if 'created_at' in profiles.columns:
+        profiles = profiles.rename(columns={'created_at': 'subscriber_since'})
+
+    # Join subscriber_details if available
+    if subscriber_details is not None and not subscriber_details.empty:
+        detail_cols = {
+            'email': 'email',
+            'name': 'name',
+            'links_clicked': 'links_clicked',
+            'last_clicked_at': 'last_clicked_at',
+            'comments': 'comments',
+            'shares': 'shares',
+            'activity_score': 'activity_score',
+            'source_free': 'acquisition_source',
+            'country': 'country',
+            'revenue': 'revenue',
+        }
+        available = {k: v for k, v in detail_cols.items() if k in subscriber_details.columns}
+        if available:
+            details_subset = subscriber_details[list(available.keys())].rename(columns={
+                k: v for k, v in available.items() if k != v
+            })
+            profiles = profiles.merge(details_subset, on='email', how='left')
+
+    return profiles
+
+
 def run_all_analyses(data: dict) -> Dict[str, Any]:
     """
     Run all analytics on the Substack data.

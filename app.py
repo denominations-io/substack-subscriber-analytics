@@ -18,7 +18,7 @@ pio.templates.default = "plotly_white"
 
 from data_loader import load_all_data
 from metrics import calculate_all_metrics, rate_open_rate
-from analytics import run_all_analyses
+from analytics import run_all_analyses, build_super_engager_profiles
 from upload_handler import get_available_datasets
 from components.upload_modal import render_upload_modal
 from components.data_manager import render_data_manager, initialize_session_state
@@ -315,6 +315,19 @@ st.markdown("""
         color: #1a1a2e !important;
     }
 
+    /* Multiselect tag chips - white text on dark background */
+    [data-baseweb="tag"] {
+        background: #1a1a2e !important;
+        color: white !important;
+    }
+    [data-baseweb="tag"] span,
+    [data-baseweb="tag"] div {
+        color: white !important;
+    }
+    [data-baseweb="tag"] [role="presentation"] {
+        color: white !important;
+    }
+
     /* Expander styling */
     .streamlit-expanderHeader {
         font-size: 0.9rem;
@@ -394,6 +407,48 @@ CHART_COLORS = {
 
 # Color palette for charts
 CHART_PALETTE = ['#1a1a2e', '#0f3460', '#e94560', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+
+# ISO 2-letter country codes to region mapping
+CONTINENT_MAPPING = {
+    # North America
+    'US': 'North America', 'CA': 'North America', 'MX': 'North America',
+    # Europe
+    'GB': 'Europe', 'DE': 'Europe', 'FR': 'Europe', 'NL': 'Europe',
+    'ES': 'Europe', 'IT': 'Europe', 'PL': 'Europe', 'SE': 'Europe',
+    'BE': 'Europe', 'CH': 'Europe', 'AT': 'Europe', 'NO': 'Europe',
+    'DK': 'Europe', 'FI': 'Europe', 'IE': 'Europe', 'PT': 'Europe',
+    'CZ': 'Europe', 'RO': 'Europe', 'GR': 'Europe', 'HU': 'Europe',
+    'SK': 'Europe', 'BG': 'Europe', 'HR': 'Europe', 'SI': 'Europe',
+    'LT': 'Europe', 'LV': 'Europe', 'EE': 'Europe', 'RS': 'Europe',
+    'UA': 'Europe', 'BY': 'Europe', 'RU': 'Europe',
+    # South Asia
+    'IN': 'South Asia', 'PK': 'South Asia', 'BD': 'South Asia',
+    'LK': 'South Asia', 'NP': 'South Asia',
+    # East Asia
+    'JP': 'East Asia', 'KR': 'East Asia', 'CN': 'East Asia',
+    'TW': 'East Asia', 'HK': 'East Asia', 'MO': 'East Asia',
+    # Southeast Asia
+    'SG': 'Southeast Asia', 'MY': 'Southeast Asia', 'ID': 'Southeast Asia',
+    'TH': 'Southeast Asia', 'VN': 'Southeast Asia', 'PH': 'Southeast Asia',
+    'MM': 'Southeast Asia', 'KH': 'Southeast Asia', 'LA': 'Southeast Asia',
+    # Oceania
+    'AU': 'Oceania', 'NZ': 'Oceania',
+    # Middle East
+    'IL': 'Middle East', 'AE': 'Middle East', 'SA': 'Middle East',
+    'TR': 'Middle East', 'IR': 'Middle East', 'IQ': 'Middle East',
+    'JO': 'Middle East', 'LB': 'Middle East', 'QA': 'Middle East',
+    'KW': 'Middle East', 'BH': 'Middle East', 'OM': 'Middle East',
+    # Latin America
+    'BR': 'Latin America', 'AR': 'Latin America', 'CO': 'Latin America',
+    'CL': 'Latin America', 'PE': 'Latin America', 'VE': 'Latin America',
+    'EC': 'Latin America', 'UY': 'Latin America', 'PY': 'Latin America',
+    'BO': 'Latin America', 'CR': 'Latin America', 'PA': 'Latin America',
+    'GT': 'Latin America', 'DO': 'Latin America', 'PR': 'Latin America',
+    # Africa
+    'ZA': 'Africa', 'NG': 'Africa', 'KE': 'Africa', 'EG': 'Africa',
+    'MA': 'Africa', 'GH': 'Africa', 'TZ': 'Africa', 'ET': 'Africa',
+    'UG': 'Africa', 'DZ': 'Africa', 'TN': 'Africa',
+}
 
 
 def apply_chart_style(fig, title=None, height=450):
@@ -521,7 +576,8 @@ def main():
     page = st.sidebar.radio(
         "Select View",
         ["📈 Overview", "📬 Post Analysis", "👥 Subscriber Analysis",
-         "📊 Engagement Trends", "🎯 Segments", "🔀 Engagement Flow", "🧹 Inactive Subscribers"]
+         "📊 Engagement Trends", "🎯 Segments", "🔀 Engagement Flow", "🤝 Super Engagers",
+         "🧹 Inactive Subscribers"]
     )
 
     st.sidebar.markdown("---")
@@ -545,6 +601,8 @@ def main():
         render_engagement_flow(data)
     elif page == "🧹 Inactive Subscribers":
         render_inactive_subscribers(data, analysis)
+    elif page == "🤝 Super Engagers":
+        render_super_engager_outreach(data, analysis)
 
 
 def render_overview(metrics, analysis, data):
@@ -1344,48 +1402,6 @@ def render_segments(analysis, data):
 
         details = subscriber_details.copy()
 
-        # Map ISO 2-letter country codes to continents/regions
-        continent_mapping = {
-            # North America
-            'US': 'North America', 'CA': 'North America', 'MX': 'North America',
-            # Europe
-            'GB': 'Europe', 'DE': 'Europe', 'FR': 'Europe', 'NL': 'Europe',
-            'ES': 'Europe', 'IT': 'Europe', 'PL': 'Europe', 'SE': 'Europe',
-            'BE': 'Europe', 'CH': 'Europe', 'AT': 'Europe', 'NO': 'Europe',
-            'DK': 'Europe', 'FI': 'Europe', 'IE': 'Europe', 'PT': 'Europe',
-            'CZ': 'Europe', 'RO': 'Europe', 'GR': 'Europe', 'HU': 'Europe',
-            'SK': 'Europe', 'BG': 'Europe', 'HR': 'Europe', 'SI': 'Europe',
-            'LT': 'Europe', 'LV': 'Europe', 'EE': 'Europe', 'RS': 'Europe',
-            'UA': 'Europe', 'BY': 'Europe', 'RU': 'Europe',
-            # South Asia
-            'IN': 'South Asia', 'PK': 'South Asia', 'BD': 'South Asia',
-            'LK': 'South Asia', 'NP': 'South Asia',
-            # East Asia
-            'JP': 'East Asia', 'KR': 'East Asia', 'CN': 'East Asia',
-            'TW': 'East Asia', 'HK': 'East Asia', 'MO': 'East Asia',
-            # Southeast Asia
-            'SG': 'Southeast Asia', 'MY': 'Southeast Asia', 'ID': 'Southeast Asia',
-            'TH': 'Southeast Asia', 'VN': 'Southeast Asia', 'PH': 'Southeast Asia',
-            'MM': 'Southeast Asia', 'KH': 'Southeast Asia', 'LA': 'Southeast Asia',
-            # Oceania
-            'AU': 'Oceania', 'NZ': 'Oceania',
-            # Middle East
-            'IL': 'Middle East', 'AE': 'Middle East', 'SA': 'Middle East',
-            'TR': 'Middle East', 'IR': 'Middle East', 'IQ': 'Middle East',
-            'JO': 'Middle East', 'LB': 'Middle East', 'QA': 'Middle East',
-            'KW': 'Middle East', 'BH': 'Middle East', 'OM': 'Middle East',
-            # Latin America
-            'BR': 'Latin America', 'AR': 'Latin America', 'CO': 'Latin America',
-            'CL': 'Latin America', 'PE': 'Latin America', 'VE': 'Latin America',
-            'EC': 'Latin America', 'UY': 'Latin America', 'PY': 'Latin America',
-            'BO': 'Latin America', 'CR': 'Latin America', 'PA': 'Latin America',
-            'GT': 'Latin America', 'DO': 'Latin America', 'PR': 'Latin America',
-            # Africa
-            'ZA': 'Africa', 'NG': 'Africa', 'KE': 'Africa', 'EG': 'Africa',
-            'MA': 'Africa', 'GH': 'Africa', 'TZ': 'Africa', 'ET': 'Africa',
-            'UG': 'Africa', 'DZ': 'Africa', 'TN': 'Africa',
-        }
-
         # Country code to name mapping for display
         country_names = {
             'US': 'United States', 'CA': 'Canada', 'MX': 'Mexico',
@@ -1405,7 +1421,7 @@ def render_segments(analysis, data):
         }
 
         if 'country' in details.columns:
-            details['continent'] = details['country'].map(continent_mapping).fillna('Other')
+            details['continent'] = details['country'].map(CONTINENT_MAPPING).fillna('Other')
 
             # Continent breakdown
             tab1, tab2, tab3 = st.tabs(["By Region", "Engagement by Region", "Activity Breakdown"])
@@ -1454,7 +1470,7 @@ def render_segments(analysis, data):
                 country_df = pd.DataFrame({
                     'Code': country_counts.index,
                     'Country': [country_names.get(c, c) for c in country_counts.index],
-                    'Region': [continent_mapping.get(c, 'Other') for c in country_counts.index],
+                    'Region': [CONTINENT_MAPPING.get(c, 'Other') for c in country_counts.index],
                     'Subscribers': country_counts.values,
                     'Percentage': (country_counts.values / len(details) * 100).round(1)
                 })
@@ -2304,6 +2320,189 @@ def render_inactive_subscribers(data, analysis):
 
     else:
         st.warning("No subscriber_details.csv found. Please upload this file for inactive subscriber analysis.")
+
+
+def render_super_engager_outreach(data, analysis):
+    """Render the Super Engager Outreach page with detailed per-engager analytics."""
+    st.markdown('<h2 class="section-header">Super Engagers</h2>', unsafe_allow_html=True)
+    st.caption("Identify and export your most engaged subscribers for warm outreach campaigns")
+
+    subscriber_details = data.get('subscriber_details', pd.DataFrame())
+    has_details = not subscriber_details.empty
+
+    # --- Section 2: Filters ---
+    st.markdown("#### Filters")
+    fcol1, fcol2, fcol3 = st.columns(3)
+
+    with fcol1:
+        min_open_rate_pct = st.slider(
+            "Minimum Open Rate (%)", min_value=50, max_value=100, value=80, step=5
+        )
+    with fcol2:
+        min_posts_delivered = st.number_input(
+            "Minimum Posts Delivered", min_value=1, max_value=100, value=5, step=1
+        )
+    with fcol3:
+        paid_filter = st.selectbox("Subscriber Type", ["All", "Paid Only", "Free Only"])
+
+    region_filter = []
+    country_filter = []
+    if has_details and 'country' in subscriber_details.columns:
+        gcol1, gcol2 = st.columns(2)
+        with gcol1:
+            regions = sorted(set(CONTINENT_MAPPING.values()))
+            regions.append('Other')
+            region_filter = st.multiselect("Filter by Region", options=regions, default=[])
+        with gcol2:
+            countries = sorted(subscriber_details['country'].dropna().unique().tolist())
+            if countries:
+                country_filter = st.multiselect("Filter by Country", options=countries, default=[])
+
+    # --- Build profiles ---
+    profiles = build_super_engager_profiles(
+        opens=data['opens'],
+        delivers=data['delivers'],
+        subscribers=data['subscribers'],
+        posts=data['posts'],
+        subscriber_details=subscriber_details if has_details else None,
+        min_open_rate=min_open_rate_pct / 100.0,
+        min_posts_delivered=min_posts_delivered,
+    )
+
+    if profiles.empty:
+        st.warning("No super engagers found with the current filter settings. Try lowering the minimum open rate or posts delivered threshold.")
+        return
+
+    # Filter out deletion-request placeholder emails
+    profiles = profiles[~profiles['email'].str.contains('deletion-request', case=False, na=False)]
+
+    # Apply paid/free filter
+    if paid_filter == "Paid Only" and 'is_paid' in profiles.columns:
+        profiles = profiles[profiles['is_paid'] == True]
+    elif paid_filter == "Free Only" and 'is_paid' in profiles.columns:
+        profiles = profiles[profiles['is_paid'] == False]
+
+    # Apply region filter
+    if region_filter and 'country' in profiles.columns:
+        profiles['region'] = profiles['country'].map(CONTINENT_MAPPING).fillna('Other')
+        profiles = profiles[profiles['region'].isin(region_filter)]
+
+    # Apply country filter
+    if country_filter and 'country' in profiles.columns:
+        profiles = profiles[profiles['country'].isin(country_filter)]
+
+    if profiles.empty:
+        st.warning("No super engagers match the selected filters.")
+        return
+
+    # --- Section 1: Summary Metrics ---
+    st.markdown("---")
+    total_se = len(profiles)
+    paid_pct = profiles['is_paid'].mean() * 100 if 'is_paid' in profiles.columns else 0
+    avg_posts_opened = profiles['posts_opened'].mean() if 'posts_opened' in profiles.columns else 0
+
+    metric_cols = st.columns(4) if has_details and 'links_clicked' in profiles.columns else st.columns(3)
+
+    with metric_cols[0]:
+        st.metric("Super Engagers", f"{total_se:,}")
+    with metric_cols[1]:
+        st.metric("% Paid Subscribers", f"{paid_pct:.1f}%")
+    with metric_cols[2]:
+        st.metric("Avg Posts Opened", f"{avg_posts_opened:.1f}")
+    if has_details and 'links_clicked' in profiles.columns and len(metric_cols) == 4:
+        with metric_cols[3]:
+            avg_clicks = profiles['links_clicked'].mean()
+            st.metric("Avg Links Clicked", f"{avg_clicks:.1f}")
+
+    # --- Section 3: Detailed Table ---
+    st.markdown("---")
+    st.subheader("Super Engager Details")
+
+    # Build display dataframe with formatted columns
+    display = profiles.copy()
+
+    # Format open rate as percentage
+    if 'open_rate' in display.columns:
+        display['open_rate'] = (display['open_rate'] * 100).round(1).astype(str) + '%'
+
+    # Format dates
+    for date_col in ['last_open_date', 'subscriber_since', 'last_clicked_at']:
+        if date_col in display.columns:
+            display[date_col] = pd.to_datetime(display[date_col], errors='coerce').dt.strftime('%Y-%m-%d')
+
+    # Add region column from country
+    if 'country' in display.columns:
+        display['region'] = display['country'].map(CONTINENT_MAPPING).fillna('Other')
+
+    # Select and order columns based on availability
+    column_order = [
+        'email', 'name', 'subscriber_since', 'is_paid',
+        'posts_opened', 'posts_delivered', 'open_rate',
+        'last_post_opened_title', 'last_open_date',
+        'links_clicked', 'last_clicked_at',
+        'comments', 'shares',
+        'acquisition_source', 'region', 'country', 'revenue',
+    ]
+    display_cols = [c for c in column_order if c in display.columns]
+    display = display[display_cols]
+
+    # Rename columns for readability
+    rename_map = {
+        'email': 'Email',
+        'name': 'Name',
+        'subscriber_since': 'Subscriber Since',
+        'is_paid': 'Paid',
+        'posts_opened': 'Posts Opened',
+        'posts_delivered': 'Posts Delivered',
+        'open_rate': 'Open Rate',
+        'last_post_opened_title': 'Last Post Opened',
+        'last_open_date': 'Last Open Date',
+        'links_clicked': 'Links Clicked',
+        'last_clicked_at': 'Last Clicked At',
+        'comments': 'Comments',
+        'shares': 'Shares',
+        'acquisition_source': 'Acquisition Source',
+        'region': 'Region',
+        'country': 'Country',
+        'revenue': 'Revenue',
+    }
+    display = display.rename(columns={k: v for k, v in rename_map.items() if k in display.columns})
+
+    st.dataframe(display, width='stretch', hide_index=True, height=600)
+
+    # --- Section 4: CSV Download ---
+    csv = display.to_csv(index=False)
+    st.download_button(
+        label=f"Download Super Engagers CSV ({total_se:,} rows)",
+        data=csv,
+        file_name="super_engagers_outreach.csv",
+        mime="text/csv",
+    )
+
+    # --- Section 5: Outreach Tips ---
+    st.markdown("---")
+
+    if not has_details:
+        st.info(
+            "**Limited data**: subscriber_details.csv was not found. "
+            "Upload it via the data manager for richer profiles including name, "
+            "links clicked, comments, shares, and country."
+        )
+
+    st.info(
+        "**Note on Substack handles**: The Substack export does not include subscriber "
+        "handles or profile URLs. To find a subscriber's Substack profile, look them up "
+        "manually on your Substack subscriber page or search by their name/email."
+    )
+
+    st.markdown("""
+> **Outreach Tips**
+> - These subscribers open **{}%+** of your posts — they are your most loyal readers.
+> - **Free super engagers** are strong candidates for paid conversion. Consider a personal email thanking them and offering a discount.
+> - **Paid super engagers** are your advocates. Ask them for testimonials, feedback, or to share your newsletter.
+> - Sort by "Last Open Date" to find recently active engagers for timely outreach.
+> - Use the CSV export to build targeted email campaigns outside Substack.
+""".format(min_open_rate_pct))
 
 
 if __name__ == "__main__":
